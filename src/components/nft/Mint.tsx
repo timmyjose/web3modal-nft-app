@@ -6,7 +6,7 @@ import { W3mButton } from '@web3modal/wagmi-react-native'
 import  mintAbi from '../../abis/MintAbi.json'
 import { useContractRead, useContractWrite, usePrepareContractWrite } from 'wagmi'
 import { sepolia } from 'viem/chains'
-import { parseEther } from 'viem'
+import { useSignTypedData } from 'wagmi'
 
 export default function Mint() {
   const navigation = useNavigation<NativeStackNavigationProp<RootParamsList>>()
@@ -28,6 +28,49 @@ export default function Mint() {
 
   const { data: mintData, isLoading: isLoadingMint, isError: isErrorMint, isSuccess: isSuccessMint, write: mint} = useContractWrite(writeConfig)
 
+  // signing typed data
+
+  // All properties on a domain are optional
+  const domain = {
+    // name: 'Ether Mail',
+    // version: '1',
+    // chainId: sepolia,
+    // verifyingContract: '0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC',
+  } as const
+   
+  // The named list of all type definitions
+  const types = {
+    Person: [
+      { name: 'name', type: 'string' },
+      { name: 'wallet', type: 'address' },
+    ],
+    Mail: [
+      { name: 'from', type: 'Person' },
+      { name: 'to', type: 'Person' },
+      { name: 'contents', type: 'string' },
+    ],
+  } as const
+   
+  const message = {
+    from: {
+      name: 'Cow',
+      wallet: '0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826',
+    },
+    to: {
+      name: 'Bob',
+      wallet: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
+    },
+    contents: 'Hello, Bob!',
+  } as const
+
+  const { data: signedData, isError: isErrorSign, isLoading: isLoadingSign, isSuccess: isSuccessSign, signTypedData } =
+    useSignTypedData({
+      domain,
+      message: message,
+      primaryType: 'Mail',
+      types: types
+    })
+ 
   return (
     <View style={styles.container}>
       {isLoading && (<Text style={styles.text}>Loading...</Text>)}
@@ -39,6 +82,11 @@ export default function Mint() {
       </Pressable>)}
       {isSuccessMint && (<Text style={styles.text}>Minted: {JSON.stringify(mintData)}</Text>)}
       {isErrorMint && (<Text style={styles.text}>Failed to mint</Text>)}
+      {!isLoading && (<Pressable style={styles.button} onPress={() => signTypedData()}>
+          <Text style={styles.text}>Sign</Text>
+        </Pressable>)}
+      {isSuccessSign && (<Text style={styles.text}>Signed: {JSON.stringify(signedData)}</Text>)}
+      {isErrorSign && (<Text style={styles.text}>Failed to sign</Text>)}
       <Pressable style={styles.button} onPress={() => navigation.goBack()}>
         <Text style={styles.text}>Go Back</Text>
       </Pressable>
